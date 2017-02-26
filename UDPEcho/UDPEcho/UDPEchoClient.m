@@ -18,51 +18,27 @@
 
 NSString * const UDPEchoClientErrorDomain = @"UDPEchoClientErrorDomain";
 
-@interface UDPEchoClient ()
 
-@property (nonatomic, assign) CFSocketRef socket;
-@property (nonatomic, assign) struct sockaddr_in addr;
-
-@end
-
-
-@implementation UDPEchoClient
-{
+@implementation UDPEchoClient {
     CFSocketRef socket;
-
     struct sockaddr_in  addr;
-}
-
-- (instancetype)init {
-    self = [super init];
-    if (self) {
-        
-    }
-    return self;
 }
 
 - (void)sendString:(NSString *)string error:(NSError **)error {
     if (socket)
     {
-        //
-        //  making the data from the address
-        //
         CFDataRef addr_data = CFDataCreate(NULL, (const UInt8*)&addr, sizeof(addr));
-        
-        //
-        //  making the data from the message
-        //
         CFDataRef msg_data  = CFDataCreate(NULL, (const UInt8*)string.UTF8String, strlen(string.UTF8String));
         
         CFSocketError socketErr = CFSocketSendData(socket, addr_data, msg_data, 0);
-        if (socketErr == kCFSocketSuccess) {
-            *error = [NSError errorWithDomain:UDPEchoClientErrorDomain code:0 userInfo:nil];
+        if (socketErr != kCFSocketSuccess) {
+            *error = [NSError errorWithDomain:UDPEchoClientErrorDomain code:0 userInfo:@{NSLocalizedDescriptionKey: @"Unable to send data"}];
         }
         return;
     }
     else {
-        NSLog(@"socket reference is null");
-        *error = [NSError errorWithDomain:UDPEchoClientErrorDomain code:0 userInfo:nil];
+        NSLog(@"Socket reference is nil");
+        *error = [NSError errorWithDomain:UDPEchoClientErrorDomain code:0 userInfo:@{NSLocalizedDescriptionKey: @"Socket reference is nil"}];
         return;
     }
 }
@@ -75,7 +51,7 @@ NSString * const UDPEchoClientErrorDomain = @"UDPEchoClientErrorDomain";
     
     if (NULL == socket) {
         if (error) {
-            *error = [NSError errorWithDomain:UDPEchoClientErrorDomain code:0 userInfo:nil];
+            *error = [NSError errorWithDomain:UDPEchoClientErrorDomain code:0 userInfo:@{NSLocalizedDescriptionKey: @"Unable to create socket. Probably the port is already bound."}];
         }
         return;
     }
@@ -87,9 +63,6 @@ NSString * const UDPEchoClientErrorDomain = @"UDPEchoClientErrorDomain";
     addr.sin_port           = htons(PORT);
     addr.sin_addr.s_addr    = inet_addr(IP);
     
-    //
-    // set runloop for data reciever
-    //
     CFRunLoopSourceRef rls = CFSocketCreateRunLoopSource(kCFAllocatorDefault, socket, 0);
     CFRunLoopAddSource(CFRunLoopGetCurrent(), rls, kCFRunLoopCommonModes);
     CFRelease(rls);

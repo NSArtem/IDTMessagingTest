@@ -40,30 +40,51 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
     self.messages = [NSMutableArray array];
-    // Do any additional setup after loading the view, typically from a nib.
     self.client = [UDPEchoClient new];
+    
     NSError *error;
-
     [self.client setupUDPClient:&error];
+    if (error) {
+        [self showError:error];
+    }
+    
+    __weak typeof(self) weakSelf = self;
     self.client.receivedMessage = ^(NSString *text) {
-        [self.messages addObject:[Message message:text isRecived:true]];
-        [self.tableView reloadData];
+        __strong typeof(self) strongSelf = weakSelf;
+        [strongSelf.messages addObject:[Message message:text isRecived:true]];
+        [strongSelf.tableView reloadData];
     };
     
-    [self.client sendString:@"Hello!" error:&error];
-    [self.messages addObject:[Message message:@"Hello" isRecived:false]];
+    [self sendText:@"Hello!"];
 }
 
-
-- (void)didReceiveMemoryWarning {
-    [super didReceiveMemoryWarning];
-    // Dispose of any resources that can be recreated.
+- (void)viewDidAppear:(BOOL)animated {
+    [super viewDidAppear:animated];
+    UIAlertController *alertController = [UIAlertController alertControllerWithTitle:nil message:@"Please make sure that the python.py from the project folder is being run" preferredStyle:UIAlertControllerStyleAlert];
+    UIAlertAction *ok = [UIAlertAction actionWithTitle:@"Ok" style:UIAlertActionStyleDefault handler:nil];
+    [alertController addAction:ok];
+    [self presentViewController:alertController animated:true completion:nil];
 }
+
 - (IBAction)sendButtonPressed:(id)sender {
-    NSError *error;
+    [self sendText:self.textField.text];
+}
 
-    [self.client sendString:self.textField.text error:&error];
-    [self.messages addObject:[Message message:self.textField.text isRecived:false]];
+- (void)sendText:(NSString *)text {
+    NSError *error;
+    [self.client sendString:text error:&error];
+    if (error) {
+        [self showError:error];
+        return;
+    }
+    [self.messages addObject:[Message message:text isRecived:false]];
+}
+
+- (void)showError:(NSError *)error {
+    UIAlertController *alertController = [UIAlertController alertControllerWithTitle:@"Error" message:error.localizedDescription preferredStyle:UIAlertControllerStyleAlert];
+    UIAlertAction *ok = [UIAlertAction actionWithTitle:@"Ok" style:UIAlertActionStyleDefault handler:nil];
+    [alertController addAction:ok];
+    [self presentViewController:alertController animated:true completion:nil];
 }
 
 #pragma mark - UITableViewDataSource
@@ -82,9 +103,6 @@
     cell.textLabel.textColor = message.isReceived ? [UIColor redColor] : [UIColor greenColor];
     
     return cell;
-    
 }
-
-
 
 @end
